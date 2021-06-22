@@ -14,11 +14,14 @@
 # KIND, either express or implied.  See the License for the
 # specific language governing permissions and limitations
 # under the License.
+#
+# This file was modified to use released binary archive file.
+#
 
 # ActiveMQ Artemis
 
 FROM adoptopenjdk:11-jre-hotspot
-LABEL maintainer="Apache ActiveMQ Team"
+LABEL maintainer="Frantisek Sidak"
 # Make sure pipes are considered to determine success, see: https://github.com/hadolint/hadolint/wiki/DL4006
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 WORKDIR /opt
@@ -31,12 +34,15 @@ ENV EXTRA_ARGS --http-host 0.0.0.0 --relax-jolokia
 # add user and group for artemis
 RUN groupadd -g 1000 -r artemis && useradd -r -u 1000 -g artemis artemis \
  && apt-get -qq -o=Dpkg::Use-Pty=0 update && \
-    apt-get -qq -o=Dpkg::Use-Pty=0 install -y libaio1 && \
+    apt-get -qq -o=Dpkg::Use-Pty=0 install -y libaio1 wget && \
     rm -rf /var/lib/apt/lists/*
 
-USER artemis
+USER root
 
-ADD . /opt/activemq-artemis
+RUN wget https://downloads.apache.org/activemq/activemq-artemis/2.17.0/apache-artemis-2.17.0-bin.tar.gz \
+    && tar -xvf ./apache-artemis-2.17.0-bin.tar.gz -C /opt/ \
+    && mv /opt/apache-artemis-2.17.0 /opt/activemq-artemis \
+    && rm ./apache-artemis-2.17.0-bin.tar.gz
 
 # Web Server
 EXPOSE 8161 \
@@ -53,11 +59,9 @@ EXPOSE 8161 \
 #Port for STOMP
     61613
 
-USER root
-
 RUN mkdir /var/lib/artemis-instance && chown -R artemis.artemis /var/lib/artemis-instance
 
-COPY ./docker/docker-run.sh /
+COPY ./docker-run.sh /
 
 USER artemis
 
